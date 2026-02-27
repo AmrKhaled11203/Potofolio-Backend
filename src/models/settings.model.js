@@ -6,6 +6,8 @@ const settingsSchema = new mongoose.Schema(
     heroSubtitle: String,
     aboutText: String,
     resumeUrl: String,
+    profilePic: String,
+    bannerImage: String,
     socialLinks: [
       {
         name: String,
@@ -13,7 +15,7 @@ const settingsSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model("Settings", settingsSchema);
