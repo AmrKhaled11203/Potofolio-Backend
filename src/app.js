@@ -5,7 +5,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
 import authRoutes from "./routes/authRoutes.js";
-import projectRoutes from "./routes/porjectRoutes.js";
+import projectRoutes from "./routes/projectRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import skillRoutes from "./routes/skillRoutes.js";
