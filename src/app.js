@@ -13,21 +13,23 @@ import skillRoutes from "./routes/skillRoutes.js";
 import notFound from "./middleware/notFoundHandler.js";
 import errorHandler from "./middleware/errorHandler.js";
 
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const uploadDir = path.join(process.cwd(), "uploads");
+
+// Ensure uploads directory exists
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const app = express();
 
 app.use(cors());
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan("dev"));
-app.use(
-  "/uploads",
-  express.static(path.join(path.dirname(__dirname), "uploads")),
-);
+app.use("/uploads", express.static(uploadDir));
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
