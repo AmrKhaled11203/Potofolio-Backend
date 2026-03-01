@@ -36,7 +36,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
-app.options("*", cors());
+app.options("(.*)", cors());
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan("dev"));
 app.use("/uploads", express.static(uploadDir));
