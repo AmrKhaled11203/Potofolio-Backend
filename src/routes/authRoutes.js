@@ -5,6 +5,6 @@ import protect from "../middleware/authHandler.js";
 const router = express.Router();
 
 router.post("/login", login);
-router.post("/register", protect, register);
+router.post("/register", register); // Temporarily unprotected to allow creating the first admin
 
 export default router;
