@@ -49,8 +49,9 @@ const corsOptions = {
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
 // ─── CORS Middleware ──────────────────────────────────────────────────────────
+//✅ app.use(cors()) alone handles ALL requests including OPTIONS preflight
+//❌ No app.options() needed — it's redundant and crashes on path-to-regexp v8+
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // ✅ Fix: replaces broken app.options("(.*)")
 
 // ─── Logging ──────────────────────────────────────────────────────────────────
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
@@ -59,9 +60,12 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
-  standardHeaders: true,  // Return limit info via `RateLimit-*` headers (RFC 6585)
-  legacyHeaders: false,   // Disable deprecated `X-RateLimit-*` headers
-  message: { success: false, error: "Too many requests. Please try again later." },
+  standardHeaders: true, // Return limit info via `RateLimit-*` headers (RFC 6585)
+  legacyHeaders: false, // Disable deprecated `X-RateLimit-*` headers
+  message: {
+    success: false,
+    error: "Too many requests. Please try again later.",
+  },
 });
 app.use(limiter);
 
