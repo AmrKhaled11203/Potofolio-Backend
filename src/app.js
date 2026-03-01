@@ -7,18 +7,16 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Route Imports
 import authRoutes from "./routes/authRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import skillRoutes from "./routes/skillRoutes.js";
 
-// Middleware Imports
 import notFound from "./middleware/notFoundHandler.js";
 import errorHandler from "./middleware/errorHandler.js";
 
-// ─── Directory Setup ─────────────────────────────────────────────────────────
+// ─── Directory Setup ──────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -29,47 +27,64 @@ if (!fs.existsSync(uploadDir)) {
 
 // ─── App Initialization ───────────────────────────────────────────────────────
 const app = express();
-
-/**
- * ✅ TRUST PROXY
- * Required for Railway/Heroku. Ensures req.ip is the user's IP, 
- * not the load balancer's IP. This is critical for Rate Limiting.
- */
 app.set("trust proxy", 1);
 
-// ─── CORS Configuration ───────────────────────────────────────────────────────
+// ─── ✅ STEP 1: Raw CORS Headers (Absolute First Middleware) ──────────────────
+// This runs BEFORE everything — before helmet, before rate limit, before errors.
+// Even if the server crashes later, this header is already attached to the response.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  // Reflect the request origin back (or use * if no origin header)
+  res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, Accept"
+  );
+
+  // ✅ Immediately resolve ALL preflight requests here — no further processing needed
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  next();
+});
+
+// ─── ✅ STEP 2: cors() Package (Secondary Safety Net) ────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : ["http://localhost:3000"]; // Default to local dev if env var is missing
+  : ["http://localhost:3000"];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, or Postman)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== "production") {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
-};
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true); // Allow Postman / curl
+      if (
+        allowedOrigins.includes(origin) ||
+        process.env.NODE_ENV !== "production"
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+    ],
+    optionsSuccessStatus: 200,})
+);
 
-/**
- * ✅ CORS MIDDLEWARE (Must be at the top)
- * This handles the OPTIONS preflight request before any other middleware
- * like Helmet or Rate Limit can interfere.
- */
-app.use(cors(corsOptions));
-
-/**
- * ✅ HELMET (Security Headers)
- * Configured to allow cross-origin resource sharing for images/assets.
- */
+// ─── Security Middleware ──────────────────────────────────────────────────────
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -80,17 +95,13 @@ app.use(
 // ─── Logging ──────────────────────────────────────────────────────────────────
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
-/**
- * ✅ RATE LIMITING
- * Prevents brute force. We skip OPTIONS requests so preflights 
- * don't count against the user's limit.
- */
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.method === "OPTIONS", // 👈 Don't limit preflight requests
+  skip: (req) => req.method === "OPTIONS", // Don't rate-limit preflight
   message: {
     success: false,
     error: "Too many requests. Please try again later.",
@@ -107,10 +118,10 @@ app.use("/uploads", express.static(uploadDir));
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get("/", (_req, res) => {
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: "Welcome to the Portfolio API 🚀",
-    env: process.env.NODE_ENV 
+    env: process.env.NODE_ENV,
   });
 });
 

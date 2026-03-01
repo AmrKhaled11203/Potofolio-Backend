@@ -1,14 +1,20 @@
 const errorHandler = (err, req, res, next) => {
-  // Use status set before throwing, fallback to 500
-  const statusCode = res.statusCode && res.statusCode !== 200
-    ? res.statusCode
-    : 500;
+  // ✅ Always re-apply CORS headers in error responses
+  // In case anything upstream clears them
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+
+  const statusCode = res.statusCode !==200 ? res.statusCode : 500;
+
+  console.error(`[ERROR] ${err.message}`);
 
   res.status(statusCode).json({
     success: false,
-    message: err.message || "Internal Server Error",
-    // Only show stack trace in development
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+    error: err.message || "Internal Server Error",
+    ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
   });
 };
 
