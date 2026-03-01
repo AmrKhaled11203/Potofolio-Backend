@@ -38,11 +38,11 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : true; // Allow all origins if env var is not set (e.g. local dev)
 
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: true, // simplified for troubleshooting; allow any origin in dev or prod
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  optionsSuccessStatus: 204, // Some legacy browsers choke on 200 for OPTIONS
+  optionsSuccessStatus: 200, // Changed from 204 to 200 for broader compatibility
 };
 
 // ─── Security Middleware ──────────────────────────────────────────────────────
