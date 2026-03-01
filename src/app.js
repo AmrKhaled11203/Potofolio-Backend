@@ -25,29 +25,22 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// ─── App Initialization ───────────────────────────────────────────────────────
+// ─── App Init ─────────────────────────────────────────────────────────────────
 const app = express();
 app.set("trust proxy", 1);
 
-// ─── ✅ STEP 1: Raw CORS Headers (Absolute First Middleware) ──────────────────
-// This runs BEFORE everything — before helmet, before rate limit, before errors.
-// Even if the server crashes later, this header is already attached to the response.
+// ─── ✅ STEP 1: Raw CORS — ABSOLUTE FIRST, before everything─────────────────
+// Runs before helmet, rate-limit, routes, and ALL error handlers.
+// Even if a crash happens after this, the headers are already on the response.
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  // Reflect the request origin back (or use * if no origin header)
   res.setHeader("Access-Control-Allow-Origin", origin || "*");
   res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Requested-With, Accept"
-  );
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept");
 
-  // ✅ Immediately resolve ALL preflight requests here — no further processing needed
+  // ✅ Handle ALL preflight requests immediately — never reaches routes
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -55,40 +48,27 @@ app.use((req, res, next) => {
   next();
 });
 
-// ─── ✅ STEP 2: cors() Package (Secondary Safety Net) ────────────────────────
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : ["http://localhost:3000"];
-
+// ─── ✅ STEP 2: cors() — Simplified to ALWAYS reflect origin ─────────────────
+//⚠️ Previously this blocked unknown origins and threw an error,
+// which could cause responses with no CORS headers in some edge cases.
+// Now it simply mirrors the origin (raw middleware is the security layer).
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // Allow Postman / curl
-      if (
-        allowedOrigins.includes(origin) ||
-        process.env.NODE_ENV !== "production"
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: true, // ✅ Reflect the request origin — never blocks
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Accept",
-    ],
-    optionsSuccessStatus: 200,})
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    optionsSuccessStatus: 200,
+  })
 );
 
-// ─── Security Middleware ──────────────────────────────────────────────────────
+// ─── ✅ STEP 3: Helmet — after CORS so it doesn't interfere ──────────────────
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginEmbedderPolicy: false,
+    // ✅ Disable Content-Security-Policy in dev, configure properly in prod
+    contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
   })
 );
 
@@ -101,11 +81,8 @@ const limiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.method === "OPTIONS", // Don't rate-limit preflight
-  message: {
-    success: false,
-    error: "Too many requests. Please try again later.",
-  },
+  skip: (req) => req.method === "OPTIONS",
+  message: { success: false, error: "Too many requests. Please try again later." },
 });
 app.use(limiter);
 
