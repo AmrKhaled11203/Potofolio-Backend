@@ -1,23 +1,15 @@
 import mongoose from "mongoose";
 
-const projectSchema = new mongoose.Schema(
-  {
-    title: String,
-    type: String,
-    description: String,
-    longDescription: String,
-    category: {
-      type: String,
-      enum: ["primary", "secondary", "white"],
-      default: "primary",
-    },
-    techStack: [String],
-    liveUrl: String,
-    githubUrl: String,
-    image: String,
-    featured: { type: Boolean, default: false },
-  },
-  { timestamps: true },
-);
+const projectSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  image: { type: String, required: true }, // This will store the Cloudinary URL
+  cloudinaryId: { type: String }, // This stores the ID needed for deletion
+  technologies: [String],
+  liveLink: String,
+  githubLink: String,
+}, { timestamps: true });
 
-export default mongoose.model("Project", projectSchema);
+const Project = mongoose.model("Project", projectSchema);
+
+export default Project;

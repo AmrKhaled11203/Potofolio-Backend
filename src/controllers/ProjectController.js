@@ -1,5 +1,15 @@
 import Project from "../models/project.model.js";
-import cloudinary from "cloudinary";
+import { v2 as cloudinary } from 'cloudinary';
+
+// @desc    Get all projects
+export const getProjects = async (req, res) => {
+  try {
+    const projects = await Project.find().sort({ createdAt: -1 });
+    res.json(projects);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // @desc    Create new project
 export const createProject = async (req, res) => {
@@ -13,11 +23,11 @@ export const createProject = async (req, res) => {
     const project = await Project.create({
       title,
       description,
-      technologies: technologies ? technologies.split(",") : [],
+      technologies: technologies ? technologies.split(',').map(t => t.trim()) : [],
       liveLink,
       githubLink,
-      image: req.file.path,
-      cloudinaryId: req.file.filename,
+      image: req.file.path, // Cloudinary URL
+      cloudinaryId: req.file.filename // Cloudinary Public ID
     });
 
     res.status(201).json(project);
@@ -30,16 +40,18 @@ export const createProject = async (req, res) => {
 export const deleteProject = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
+    
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
 
+    // Delete image from Cloudinary
     if (project.cloudinaryId) {
-      await cloudinary.v2.uploader.destroy(project.cloudinaryId);
+      await cloudinary.uploader.destroy(project.cloudinaryId);
     }
 
     await project.deleteOne();
-    res.json({ message: "Project removed" });
+    res.json({ message: "Project removed successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

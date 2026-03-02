@@ -1,18 +1,19 @@
 import express from "express";
-import {
-  createProject,
-  deleteProject,
-  // Add other controller functions here if you have them
+import { 
+  getProjects, 
+  createProject, 
+  deleteProject 
 } from "../controllers/ProjectController.js";
-
 import upload from "../middleware/upload.js";
 import protect from "../middleware/authHandler.js";
 
 const router = express.Router();
 
-// Define your routes
+// Public route
+router.get("/", getProjects);
+
+// Protected routes (require login)
 router.post("/", protect, upload.single("image"), createProject);
 router.delete("/:id", protect, deleteProject);
 
-// This is the line that was missing and causing the error
 export default router;
