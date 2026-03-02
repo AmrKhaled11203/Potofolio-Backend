@@ -1,47 +1,18 @@
-import Project from "../models/project.model.js";
-import cloudinary from "cloudinary";
+import express from "express";
+import {
+  createProject,
+  deleteProject,
+  // Add other controller functions here if you have them
+} from "../controllers/ProjectController.js";
 
-// @desc    Create new project
-export const createProject = async (req, res) => {
-  try {
-    const { title, description, technologies, liveLink, githubLink } = req.body;
+import upload from "../middleware/upload.js";
+import protect from "../middleware/authHandler.js";
 
-    if (!req.file) {
-      return res.status(400).json({ message: "Please upload an image" });
-    }
+const router = express.Router();
 
-    const project = await Project.create({
-      title,
-      description,
-      technologies: technologies ? technologies.split(",") : [],
-      liveLink,
-      githubLink,
-      image: req.file.path,
-      cloudinaryId: req.file.filename,
-    });
+// Define your routes
+router.post("/", protect, upload.single("image"), createProject);
+router.delete("/:id", protect, deleteProject);
 
-    res.status(201).json(project);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
-
-// @desc    Delete project
-export const deleteProject = async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id);
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
-
-    // Delete image from Cloudinary using the stored ID
-    if (project.cloudinaryId) {
-      await cloudinary.v2.uploader.destroy(project.cloudinaryId);
-    }
-
-    await project.deleteOne();
-    res.json({ message: "Project removed" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+// This is the line that was missing and causing the error
+export default router;
