@@ -1,5 +1,5 @@
-import Project from "../models/ProjectModel.js";
-import cloudinary from 'cloudinary';
+import Project from "../models/project.model.js";
+import cloudinary from "cloudinary";
 
 // @desc    Create new project
 export const createProject = async (req, res) => {
@@ -13,11 +13,11 @@ export const createProject = async (req, res) => {
     const project = await Project.create({
       title,
       description,
-      technologies: technologies ? technologies.split(',') : [],
+      technologies: technologies ? technologies.split(",") : [],
       liveLink,
       githubLink,
-      image: req.file.path, 
-      cloudinaryId: req.file.filename 
+      image: req.file.path,
+      cloudinaryId: req.file.filename,
     });
 
     res.status(201).json(project);
